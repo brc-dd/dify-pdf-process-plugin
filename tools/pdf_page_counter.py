@@ -1,5 +1,4 @@
-import io
-import PyPDF2
+import fitz
 from collections import OrderedDict
 from dify_plugin.entities import I18nObject
 from dify_plugin.entities.tool import ToolInvokeMessage, ToolParameter, ToolParameterOption
@@ -37,7 +36,7 @@ class PDFPageCounterTool(Tool):
 
         Returns:
             Generator[ToolInvokeMessage, None, None]: Generator yielding the page count in specified format
-            
+
         Raises:
             ValueError: If the PDF content format is invalid or required parameters are missing
             Exception: For any other errors during PDF processing
@@ -45,19 +44,18 @@ class PDFPageCounterTool(Tool):
         try:
             pdf_content = tool_parameters.get("pdf_content")
             output_format = tool_parameters.get("output_format", "number")
-            
+
             if not isinstance(pdf_content, File):
                 raise ValueError("Invalid PDF content format. Expected File object.")
-            
+
             try:
-                # Wrap the bytes in BytesIO to provide seek capability
-                pdf_file = io.BytesIO(pdf_content.blob)
-                pdf_reader = PyPDF2.PdfReader(pdf_file)
+                pdf_bytes = pdf_content.blob
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             except Exception as e:
                 raise ValueError(f"Invalid PDF file: {str(e)}")
-            
-            total_pages = len(pdf_reader.pages)
-            
+
+            total_pages = doc.page_count
+
             if output_format == "json":
                 # Create an ordered dictionary with page numbers
                 page_dict = OrderedDict()
@@ -66,12 +64,17 @@ class PDFPageCounterTool(Tool):
                 yield self.create_json_message(page_dict)
             else:
                 yield self.create_text_message(str(total_pages))
-            
-        except ValueError as e:
+
+        except ValueError:
             raise
         except Exception as e:
             raise Exception(f"Error counting pages in PDF: {str(e)}")
-            
+        finally:
+            try:
+                doc.close()
+            except Exception:
+                pass
+
     def get_runtime_parameters(
         self,
         conversation_id: Optional[str] = None,
@@ -80,7 +83,7 @@ class PDFPageCounterTool(Tool):
     ) -> list[ToolParameter]:
         """
         Get the runtime parameters for the PDF page counter tool.
-        
+
         Returns:
             list[ToolParameter]: List of tool parameters
         """
@@ -120,4 +123,4 @@ class PDFPageCounterTool(Tool):
                 ],
             ),
         ]
-        return parameters 
+        return parameters

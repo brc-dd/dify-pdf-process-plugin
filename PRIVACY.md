@@ -24,7 +24,7 @@ No personal information is collected or stored, including:
 
 - Files are processed in memory only
 - No data is stored after processing completes
-- Uses PyPDF2, PyMuPDF, and Pillow libraries which process everything locally
+- Uses PyMuPDF and Pillow libraries which process everything locally
 - Generated images are temporary and deleted after processing
 - Your data is not shared with anyone
 
